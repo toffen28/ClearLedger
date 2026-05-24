@@ -79,7 +79,7 @@ export default function NewInvoicePage() {
     addInvoice({
       id: `inv-${Date.now()}`,
       invoiceNumber,
-      clientId: client.id || "new",
+      clientId: ('id' in client ? (client as {id: string}).id : undefined) || "new",
       clientName: client.name,
       clientEmail: client.email,
       items,
