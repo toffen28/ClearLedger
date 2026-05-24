@@ -128,7 +128,7 @@ export default function HomePage() {
           </p>
           <div className="flex items-center justify-center gap-4 animate-fade-in">
             <button
-              onClick={() => plan.tier === "Free" ? handleDemo() : handleUpgrade(plan.tier)}
+              onClick={handleDemo}
               className="inline-flex items-center gap-2 px-8 py-4 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl shadow-lg shadow-teal-200/50 transition-all hover:-translate-y-0.5"
             >
               Try the Demo
