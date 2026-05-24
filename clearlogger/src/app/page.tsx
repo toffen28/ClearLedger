@@ -66,9 +66,22 @@ export default function HomePage() {
     setLoading(false);
   };
 
-  const handleDemo = () => {
+ const handleDemo = () => {
     setUser({ id: "demo-user", email: "demo@clearlogger.app", fullName: "Demo User", planTier: "pro" });
     router.push("/dashboard");
+  };
+
+  const handleUpgrade = async (tier: string) => {
+    const priceId = tier === "Pro" 
+      ? process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID 
+      : process.env.NEXT_PUBLIC_STRIPE_BUSINESS_PRICE_ID;
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priceId }),
+    });
+    const { url } = await res.json();
+    if (url) window.location.href = url;
   };
 
   return (
