@@ -14,6 +14,8 @@ import {
   ArrowUpRight,
   Clock,
   CheckCircle,
+  AlertCircle,
+  FileText,
   X,
 } from "lucide-react";
 import Link from "next/link";
