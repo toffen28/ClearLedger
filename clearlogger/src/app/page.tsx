@@ -70,7 +70,10 @@ export default function HomePage() {
     router.push("/dashboard");
   };
 
-  const handleUpgrade = async (tier: string) => {
+  const handleDemo = () => {
+    setUser({ id: "demo-user", email: "demo@clearledger.app", fullName: "Demo User", planTier: "pro" });
+    router.push("/dashboard");
+  };
     const priceId = tier === "Pro"
       ? process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID
       : process.env.NEXT_PUBLIC_STRIPE_BUSINESS_PRICE_ID;
