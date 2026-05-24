@@ -14,16 +14,16 @@ import {
   ArrowUpRight,
   Clock,
   CheckCircle,
-  AlertCircle,
-  FileText,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
   paid: { label: "Paid", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle },
   sent: { label: "Sent", color: "bg-blue-100 text-blue-700", icon: Clock },
   overdue: { label: "Overdue", color: "bg-amber-100 text-amber-700", icon: AlertCircle },
   draft: { label: "Draft", color: "bg-slate-100 text-slate-600", icon: FileText },
+  cancelled: { label: "Cancelled", color: "bg-slate-100 text-slate-400", icon: X },
 };
 
 export default function DashboardPage() {
@@ -209,4 +209,5 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
 }
