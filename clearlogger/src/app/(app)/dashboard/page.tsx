@@ -1,326 +1,214 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useApp } from "@/store/AppContext";
+import KPICard from "@/components/dashboard/KPICard";
+import ProfitLossChart from "@/components/dashboard/ProfitLossChart";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import Link from "next/link";
 import {
-  ChevronLeft,
-  ChevronRight,
+  ArrowUpCircle,
+  DollarSign,
+  PiggyBank,
+  TrendingUp,
   Plus,
-  Trash2,
-  FileText,
-  Send,
+  ArrowUpRight,
+  Clock,
   CheckCircle,
-  Users,
-  Eye,
+  AlertCircle,
+  FileText,
+  X,
 } from "lucide-react";
-import type { InvoiceItem, Client } from "@/types";
+import Link from "next/link";
 
-const STEPS = ["Client", "Line Items", "Details", "Review"];
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof CheckCircle }> = {
+  paid: { label: "Paid", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle },
+  sent: { label: "Sent", color: "bg-blue-100 text-blue-700", icon: Clock },
+  overdue: { label: "Overdue", color: "bg-amber-100 text-amber-700", icon: AlertCircle },
+  draft: { label: "Draft", color: "bg-slate-100 text-slate-600", icon: FileText },
+  cancelled: { label: "Cancelled", color: "bg-slate-100 text-slate-400", icon: X },
+};
 
-export default function NewInvoicePage() {
-  const router = useRouter();
-  const { clients, addInvoice } = useApp();
+export default function DashboardPage() {
+  const { getDashboardData, invoices } = useApp();
+  const data = getDashboardData();
 
-  const [step, setStep] = useState(0);
-  const [clientId, setClientId] = useState("");
-  const [newClient, setNewClient] = useState({ name: "", email: "", company: "" });
-  const [useNewClient, setUseNewClient] = useState(false);
-  const [items, setItems] = useState<InvoiceItem[]>([
-    { id: "i1", description: "", quantity: 1, rate: 0, amount: 0 },
-  ]);
-  const [dueDate, setDueDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 30);
-    return d.toISOString().split('T')[0];
-  });
-  const [notes, setNotes] = useState("");
-  const [sending, setSending] = useState(false);
-
-  const existingClient = clients.find(c => c.id === clientId);
-  const selectedClient: Client = useNewClient
-    ? { id: "new", name: newClient.name, email: newClient.email, company: newClient.company, createdAt: new Date().toISOString() }
-    : existingClient!;
-
-  const total = items.reduce((s, i) => s + i.amount, 0);
-  const invoiceNumber = `CL-${String(Date.now()).slice(-4)}`;
-
-  const handleAddItem = () => {
-    setItems(prev => [...prev, { id: `i-${Date.now()}`, description: "", quantity: 1, rate: 0, amount: 0 }]);
-  };
-
-  const handleRemoveItem = (id: string) => {
-    if (items.length > 1) setItems(prev => prev.filter(i => i.id !== id));
-  };
-
-  const handleItemChange = (id: string, field: keyof InvoiceItem, value: string | number) => {
-    setItems(prev => prev.map(i => {
-      if (i.id !== id) return i;
-      const updated = { ...i, [field]: value };
-      if (field === 'quantity' || field === 'rate') {
-        updated.amount = updated.quantity * updated.rate;
-      }
-      return updated;
-    }));
-  };
-
-  const canProceed = () => {
-    if (step === 0) return useNewClient ? (newClient.name && newClient.email) : !!clientId;
-    if (step === 1) return items.every(i => i.description && i.amount > 0);
-    if (step === 2) return !!dueDate;
-    return true;
-  };
-
-  const handleSend = async () => {
-    setSending(true);
-    await new Promise(r => setTimeout(r, 1000));
-    const client = selectedClient!;
-    addInvoice({
-      id: `inv-${Date.now()}`,
-      invoiceNumber,
-      clientId: ('id' in client ? client.id : undefined) || "new",
-      clientName: client.name,
-      clientEmail: client.email,
-      items,
-      status: 'sent',
-      amount: total,
-      dueDate,
-      sentAt: new Date().toISOString().split('T')[0],
-      notes,
-    });
-    setSending(false);
-    router.push("/invoices");
-  };
-
-  const formatCurrency = (n: number) => `£${n.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`;
-  const formatDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const formatCurrency = (n: number) => `£${n.toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  const formatDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
+    <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/invoices">
-          <Button variant="ghost" size="sm"><ChevronLeft size={16} /> Back</Button>
-        </Link>
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">New Invoice</h1>
-          <p className="text-slate-500 text-sm">Create and send a professional invoice</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Here's how your business is performing</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link href="/income">
+            <Button variant="secondary" size="md">
+              <Plus size={16} />
+              Add Income
+            </Button>
+          </Link>
+          <Link href="/invoices/new">
+            <Button variant="primary" size="md">
+              <Plus size={16} />
+              New Invoice
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* Step Indicator */}
-      <div className="flex items-center gap-2">
-        {STEPS.map((s, i) => (
-          <div key={s} className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-              i <= step ? "bg-teal-600 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500"
-            }`}>
-              {i < step ? <CheckCircle size={16} /> : i + 1}
-            </div>
-            <span className={`text-sm font-medium hidden sm:block ${i <= step ? "text-slate-900 dark:text-white" : "text-slate-400"}`}>{s}</span>
-            {i < STEPS.length - 1 && <div className={`w-8 h-0.5 ${i < step ? "bg-teal-600" : "bg-slate-200 dark:bg-slate-700"}`} />}
-          </div>
-        ))}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard
+          title="Net Profit This Month"
+          value={formatCurrency(data.netProfitThisMonth)}
+          subtitle="After all expenses"
+          trend={12}
+          accentColor="text-teal-600 dark:text-teal-400"
+          icon={<TrendingUp size={20} />}
+        />
+        <KPICard
+          title="Outstanding Invoices"
+          value={formatCurrency(data.outstandingInvoices)}
+          subtitle={`${data.outstandingInvoicesList.length} unpaid invoice${data.outstandingInvoicesList.length !== 1 ? 's' : ''}`}
+          accentColor="text-amber-600 dark:text-amber-400"
+          icon={<DollarSign size={20} />}
+        />
+        <KPICard
+          title="Tax to Set Aside"
+          value={formatCurrency(data.taxToSetAside)}
+          subtitle="20% of income (UK estimate)"
+          accentColor="text-blue-600 dark:text-blue-400"
+          icon={<PiggyBank size={20} />}
+        />
+        <KPICard
+          title="Biggest Expense"
+          value={data.biggestExpenseCategory}
+          subtitle="This month"
+          accentColor="text-slate-600 dark:text-slate-400"
+          icon={<ArrowUpCircle size={20} />}
+        />
       </div>
 
-      {/* Step Content */}
-      <Card className="p-8">
-        {/* Step 0: Client */}
-        {step === 0 && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Who is this invoice for?</h2>
-            <div className="flex gap-4 mb-6">
-              <button
-                onClick={() => setUseNewClient(false)}
-                className={`flex-1 p-4 rounded-xl border-2 transition-colors ${!useNewClient ? "border-teal-500 bg-teal-50/50" : "border-slate-200 dark:border-slate-700"}`}
-              >
-                <Users size={24} className={`mb-2 ${!useNewClient ? "text-teal-600" : "text-slate-400"}`} />
-                <p className="font-medium text-slate-900 dark:text-white">Existing Client</p>
-                <p className="text-xs text-slate-500 mt-1">Select from your saved clients</p>
-              </button>
-              <button
-                onClick={() => setUseNewClient(true)}
-                className={`flex-1 p-4 rounded-xl border-2 transition-colors ${useNewClient ? "border-teal-500 bg-teal-50/50" : "border-slate-200 dark:border-slate-700"}`}
-              >
-                <Plus size={24} className={`mb-2 ${useNewClient ? "text-teal-600" : "text-slate-400"}`} />
-                <p className="font-medium text-slate-900 dark:text-white">New Client</p>
-                <p className="text-xs text-slate-500 mt-1">Enter details for a new client</p>
-              </button>
-            </div>
+      {/* Charts + Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Chart */}
+        <div className="lg:col-span-2">
+          <ProfitLossChart />
+        </div>
 
-            {!useNewClient ? (
-              <div className="space-y-2">
-                {clients.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => setClientId(c.id)}
-                    className={`w-full p-4 rounded-xl border-2 text-left transition-colors ${
-                      clientId === c.id ? "border-teal-500 bg-teal-50/50" : "border-slate-200 dark:border-slate-700 hover:border-slate-300"
-                    }`}
-                  >
-                    <p className="font-medium text-slate-900 dark:text-white">{c.name}</p>
-                    <p className="text-sm text-slate-500">{c.email} {c.company ? `· ${c.company}` : ''}</p>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <Input label="Client Name" placeholder="Sarah Mitchell" value={newClient.name} onChange={e => setNewClient(c => ({ ...c, name: e.target.value }))} required />
-                <Input label="Email" type="email" placeholder="sarah@example.com" value={newClient.email} onChange={e => setNewClient(c => ({ ...c, email: e.target.value }))} required />
-                <Input label="Company (optional)" placeholder="Mitchell Design Studio" value={newClient.company} onChange={e => setNewClient(c => ({ ...c, company: e.target.value }))} />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Step 1: Line Items */}
-        {step === 1 && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">What are you charging for?</h2>
+        {/* Quick stats */}
+        <div className="space-y-4">
+          <Card className="p-6">
+            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">Invoice Status</h3>
             <div className="space-y-3">
-              <div className="grid grid-cols-12 gap-3 text-sm font-medium text-slate-500 dark:text-slate-400 px-1">
-                <div className="col-span-5">Description</div>
-                <div className="col-span-2">Qty</div>
-                <div className="col-span-2">Rate</div>
-                <div className="col-span-2 text-right">Amount</div>
-                <div className="col-span-1"></div>
-              </div>
-              {items.map((item) => (
-                <div key={item.id} className="grid grid-cols-12 gap-3 items-center">
-                  <input
-                    type="text"
-                    placeholder="Design services"
-                    value={item.description}
-                    onChange={e => handleItemChange(item.id, 'description', e.target.value)}
-                    className="col-span-5 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  />
-                  <input
-                    type="number"
-                    placeholder="1"
-                    value={item.quantity || ''}
-                    onChange={e => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 0)}
-                    className="col-span-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  />
-                  <input
-                    type="number"
-                    placeholder="0.00"
-                    value={item.rate || ''}
-                    onChange={e => handleItemChange(item.id, 'rate', parseFloat(e.target.value) || 0)}
-                    className="col-span-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  />
-                  <div className="col-span-2 text-right font-mono font-semibold text-slate-900 dark:text-white">
-                    {formatCurrency(item.amount)}
+              {[
+                { label: "Paid this month", value: invoices.filter(i => i.status === 'paid').reduce((s, i) => s + i.amount, 0), color: "bg-emerald-500" },
+                { label: "Sent & awaiting", value: invoices.filter(i => i.status === 'sent').reduce((s, i) => s + i.amount, 0), color: "bg-blue-500" },
+                { label: "Overdue", value: invoices.filter(i => i.status === 'overdue').reduce((s, i) => s + i.amount, 0), color: "bg-amber-500" },
+              ].map(s => (
+                <div key={s.label} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${s.color}`} />
+                    <span className="text-sm text-slate-600 dark:text-slate-300">{s.label}</span>
                   </div>
-                  <button onClick={() => handleRemoveItem(item.id)} className="col-span-1 p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 flex justify-end">
-                    <Trash2 size={16} />
-                  </button>
+                  <span className="font-mono font-semibold text-slate-900 dark:text-white">{formatCurrency(s.value)}</span>
                 </div>
               ))}
             </div>
-            <Button variant="ghost" size="sm" onClick={handleAddItem}><Plus size={14} /> Add Line Item</Button>
-            <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-700">
-              <div className="text-right">
-                <p className="text-sm text-slate-500">Total</p>
-                <p className="text-3xl font-bold font-mono text-slate-900 dark:text-white">{formatCurrency(total)}</p>
-              </div>
-            </div>
-          </div>
-        )}
+          </Card>
 
-        {/* Step 2: Details */}
-        {step === 2 && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Invoice details</h2>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Invoice Number</p>
-                  <p className="font-mono text-lg text-slate-900 dark:text-white">{invoiceNumber}</p>
-                </div>
-                <Input label="Due Date" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Notes (optional)</label>
-                <textarea
-                  placeholder="Payment terms, thank you message, etc."
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
-                />
-              </div>
+          <Card className="p-6">
+            <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">Quick Links</h3>
+            <div className="space-y-2">
+              <Link href="/invoices" className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">View all invoices</span>
+                <ArrowUpRight size={16} className="text-slate-400" />
+              </Link>
+              <Link href="/clients" className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Manage clients</span>
+                <ArrowUpRight size={16} className="text-slate-400" />
+              </Link>
+              <Link href="/calendar" className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Cashflow calendar</span>
+                <ArrowUpRight size={16} className="text-slate-400" />
+              </Link>
             </div>
-          </div>
-        )}
-
-        {/* Step 3: Review */}
-        {step === 3 && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Review & Send</h2>
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Invoice</p>
-                  <p className="text-2xl font-bold font-mono text-slate-900 dark:text-white">{invoiceNumber}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total Due</p>
-                  <p className="text-3xl font-bold font-mono text-teal-600">{formatCurrency(total)}</p>
-                </div>
-              </div>
-              <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Bill To</p>
-                <p className="font-semibold text-slate-900 dark:text-white">{selectedClient?.name}</p>
-                <p className="text-sm text-slate-500">{selectedClient?.email}</p>
-                {selectedClient?.company && <p className="text-sm text-slate-500">{selectedClient.company}</p>}
-              </div>
-              <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Due Date</p>
-                <p className="text-slate-900 dark:text-white">{formatDate(dueDate)}</p>
-              </div>
-              <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Items</p>
-                {items.map(item => (
-                  <div key={item.id} className="flex justify-between py-1">
-                    <span className="text-slate-700 dark:text-slate-300">{item.description}</span>
-                    <span className="font-mono text-slate-900 dark:text-white">{formatCurrency(item.amount)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between pt-2 border-t border-slate-100 dark:border-slate-700 mt-2">
-                  <span className="font-semibold text-slate-900 dark:text-white">Total</span>
-                  <span className="font-bold font-mono text-slate-900 dark:text-white">{formatCurrency(total)}</span>
-                </div>
-              </div>
-              {notes && (
-                <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Notes</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">{notes}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Navigation */}
-        <div className="flex items-center justify-between pt-8 border-t border-slate-100 dark:border-slate-700 mt-8">
-          <Button variant="ghost" onClick={() => step > 0 ? setStep(s => s - 1) : router.push('/invoices')}>
-            <ChevronLeft size={16} /> {step > 0 ? "Back" : "Cancel"}
-          </Button>
-          {step < 3 ? (
-            <Button variant="primary" onClick={() => setStep(s => s + 1)} disabled={!canProceed()}>
-              Continue <ChevronRight size={16} />
-            </Button>
-          ) : (
-            <Button variant="primary" onClick={handleSend} disabled={sending}>
-              {sending ? "Sending..." : <><Send size={16} /> Send Invoice</>}
-            </Button>
-          )}
+          </Card>
         </div>
-      </Card>
+      </div>
+
+      {/* Recent Transactions + Outstanding Invoices */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Transactions */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Recent Transactions</h3>
+            <Link href="/income" className="text-sm text-teal-600 dark:text-teal-400 font-medium hover:underline">View all</Link>
+          </div>
+          <div className="space-y-3">
+            {data.recentTransactions.map((t) => (
+              <div key={t.id} className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                    {t.type === 'income' ? <ArrowUpCircle size={18} /> : <ArrowUpCircle size={18} style={{ transform: 'rotate(180deg)' }} />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">{t.description}</p>
+                    <p className="text-xs text-slate-500">{t.category} · {formatDate(t.date)}</p>
+                  </div>
+                </div>
+                <span className={`font-mono font-semibold ${t.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Outstanding Invoices */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Outstanding Invoices</h3>
+            <Link href="/invoices" className="text-sm text-teal-600 dark:text-teal-400 font-medium hover:underline">View all</Link>
+          </div>
+          <div className="space-y-3">
+            {data.outstandingInvoicesList.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle size={32} className="text-slate-300 mx-auto mb-2" />
+                <p className="text-slate-500 text-sm">All invoices are paid!</p>
+              </div>
+            ) : (
+              data.outstandingInvoicesList.map((inv) => {
+                const config = STATUS_CONFIG[inv.status] || STATUS_CONFIG.draft;
+                const StatusIcon = config.icon;
+                return (
+                  <div key={inv.id} className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                        <FileText size={18} className="text-slate-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">{inv.clientName}</p>
+                        <p className="text-xs text-slate-500">{inv.invoiceNumber} · Due {formatDate(inv.dueDate)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+                        <StatusIcon size={12} />
+                        {config.label}
+                      </span>
+                      <span className="font-mono font-semibold text-slate-900 dark:text-white">{formatCurrency(inv.amount)}</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

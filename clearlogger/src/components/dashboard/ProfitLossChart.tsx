@@ -15,7 +15,7 @@ export default function ProfitLossChart() {
       </div>
       <ResponsiveContainer width="100%" height={260}>
         <BarChart data={data} barGap={8}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" darkStroke="#334E65" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
           <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={false} />
           <YAxis tick={{ fontSize: 12, fill: '#64748B' }} tickLine={false} axisLine={false} tickFormatter={(v) => `£${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
           <Tooltip

@@ -18,7 +18,7 @@ import {
   Users,
   Eye,
 } from "lucide-react";
-import type { InvoiceItem } from "@/types";
+import type { InvoiceItem, Client } from "@/types";
 
 const STEPS = ["Client", "Line Items", "Details", "Review"];
 
@@ -41,7 +41,10 @@ export default function NewInvoicePage() {
   const [notes, setNotes] = useState("");
   const [sending, setSending] = useState(false);
 
-  const selectedClient = useNewClient ? newClient : clients.find(c => c.id === clientId);
+  const existingClient = clients.find(c => c.id === clientId);
+  const selectedClient: Client = useNewClient
+    ? { id: "new", name: newClient.name, email: newClient.email, company: newClient.company, createdAt: new Date().toISOString() }
+    : existingClient!;
 
   const total = items.reduce((s, i) => s + i.amount, 0);
   const invoiceNumber = `CL-${String(Date.now()).slice(-4)}`;
@@ -79,7 +82,7 @@ export default function NewInvoicePage() {
     addInvoice({
       id: `inv-${Date.now()}`,
       invoiceNumber,
-      clientId: ('id' in client ? (client as {id: string}).id : undefined) || "new",
+      clientId: client.id || "new",
       clientName: client.name,
       clientEmail: client.email,
       items,
