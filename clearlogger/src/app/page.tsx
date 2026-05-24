@@ -66,9 +66,17 @@ export default function HomePage() {
     setLoading(false);
   };
 
- const handleDemo = () => {
-    setUser({ id: "demo-user", email: "demo@clearlogger.app", fullName: "Demo User", planTier: "pro" });
-    router.push("/dashboard");
+ const handleUpgrade = async (tier: string) => {
+    const priceId = tier === "Pro" 
+      ? process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID 
+      : process.env.NEXT_PUBLIC_STRIPE_BUSINESS_PRICE_ID;
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priceId }),
+    });
+    const { url } = await res.json();
+    if (url) window.location.href = url;
   };
 
   const handleUpgrade = async (tier: string) => {
@@ -128,7 +136,7 @@ export default function HomePage() {
           </p>
           <div className="flex items-center justify-center gap-4 animate-fade-in">
             <button
-              onClick={handleDemo}
+              onClick={() => plan.tier === "Free" ? handleDemo() : handleUpgrade(plan.tier)}
               className="inline-flex items-center gap-2 px-8 py-4 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl shadow-lg shadow-teal-200/50 transition-all hover:-translate-y-0.5"
             >
               Try the Demo
